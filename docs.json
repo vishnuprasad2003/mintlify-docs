@@ -23,22 +23,10 @@
           {
             "group": "API Workflows",
             "pages": [
-              {
-                "page": "credit-facility/api-documentation",
-                "title": "Credit Facility API"
-              },
-              {
-                "page": "whole-loan/api-documentation", 
-                "title": "Whole Loan Flow API"
-              },
-              {
-                "page": "securitization/api-documentation",
-                "title": "Securitization Flow API"
-              },
-              {
-                "page": "participation-agreement/api-documentation",
-                "title": "Participation Agreement API"
-              }
+              "credit-facility/api-documentation",
+              "whole-loan/api-documentation",
+              "securitization/api-documentation",
+              "participation-agreement/api-documentation"
             ]
           }
         ]
