@@ -1,0 +1,1577 @@
+---
+title: "Credit Facility API"
+description: "Comprehensive API documentation for managing credit facilities, term sheets, master commitments, and funding requests"
+---
+
+# Credit Facility (CF) Module - API Documentation
+
+## 📋 Overview
+
+The Credit Facility (CF) Module provides a comprehensive API for managing credit facility operations including Term Sheets, Master Commitments, and Funding Requests.
+
+**Base URL:** `/cf/`  
+**Module:** `creditFacility`  
+**Version:** `1.0.0`  
+**Collections:** `cf_term_sheets`, `cf_master_commitments`, `cf_funding_requests`, `cf_funding_notices`
+
+<Note>
+**Base URLs:**
+- **Test Network:** `https://imuat.intainmarkets.us/`
+- **Production Network:** `https://intainmarkets.us/`
+</Note>
+
+## 🎯 **API Summary**
+
+### **📄 Term Sheet APIs (10 APIs)**
+- **Core Operations (7 APIs):** Create, Get, Update, Submit, Accept, Reject, Request Changes
+- **Auto-Save (1 API):** Field auto-save
+- **Document Management (2 APIs):** Upload, Preview
+
+### **🏢 Master Commitment APIs (6 APIs)**
+- **Core Operations (4 APIs):** Create, Get, Update, Finalize
+- **Auto-Save (1 API):** Field auto-save
+- **Facility Setup Model (1 API):** Complete facility setup model
+- **Status Change:** Becomes ACTIVE via DocuSign completion by any lender
+
+### **📋 Funding Request APIs (9 APIs)**
+- **Core Operations (7 APIs):** Create Draft, Update, Submit, Check Readiness, Approve, Reject, Request Changes
+- **Auto-Save (2 APIs):** Field auto-save, Get status
+- **Document Management (1 API):** Upload Collateral
+- **Status Change:** Becomes APPROVED via DocuSign completion by facility agent
+
+### **📄 Funding Notice APIs (5 APIs)**
+- **Core Operations (5 APIs):** Approve Token Transfer, Confirm Fund Transfer, Update Lender Status, Update Token Distribution, DocuSign Funding Notice
+- **Status Change:** PENDING_ESIGN → ESIGN_COMPLETED → ISSUED via DocuSign and borrower approval
+
+### **🏢 Facility Overview APIs (5 APIs)**
+- **Overview Operations (5 APIs):** Issuer Facility, Facility Agent Setup/Active, Lender Facility/Opportunities
+
+### **📊 CF Overview & Document APIs (4 APIs)**
+- **Overview & Management (4 APIs):** CF Overview, CF Overview Investor, Dashboard Overview, Download Documents
+
+### **🔗 Loan Mapping APIs (1 API)**
+- **Borrower Actions (1 API):** Map Loans to Credit Facility
+
+**Total: 39 APIs** across all modules
+
+## 🔗 Table of Contents
+
+- [Authentication](#authentication)
+- [DocuSign Integration](#docusign-integration)
+- [Response Format](#response-format)
+- [Workflow](#workflow)
+- [Term Sheet APIs](#term-sheet-apis)
+- [Master Commitment APIs](#master-commitment-apis)
+- [Funding Request APIs](#funding-request-apis)
+- [Facility Overview APIs](#facility-overview-apis)
+- [Funding Notice APIs](#funding-notice-apis)
+- [CF Overview & Document APIs](#cf-overview--document-apis)
+- [Loan Mapping APIs](#loan-mapping-apis)
+- [Data Models](#data-models)
+- [Error Handling](#error-handling)
+
+## 🔐 Authentication
+
+All API endpoints require proper authentication. User context should be provided through request headers or middleware.
+
+```http
+Content-Type: application/json
+User-Agent: CF-Module-Client/1.0
+```
+
+## 📋 DocuSign Integration
+
+The Credit Facility module integrates with DocuSign for electronic signatures and status changes:
+
+### **Master Commitment DocuSign**
+- **Trigger:** When master commitment status is `PendingLenderApproval`
+- **Process:** Any selected lender can complete DocuSign
+- **Result:** Master commitment status changes to `ACTIVE`
+- **Endpoint:** `GET /docusign/signing-complete?envelopeRequest=masterCommitmentSign&envelopeId=123&masterCommitmentId=MC-123&lenderOrgId=LENDER-456`
+- **Dynamic URL:** `defaultReturnUrl` includes `masterCommitmentId` and `lenderOrgId` parameters
+
+### **Funding Request DocuSign**
+- **Trigger:** When funding request status is `FAReview`
+- **Process:** Facility agent completes DocuSign approval
+- **Result:** Funding request status changes to `APPROVED` + Auto-generates funding notice
+- **Endpoint:** `GET /docusign/signing-complete?envelopeRequest=fundingRequestSign&envelopeId=123&fundingRequestId=FR-789`
+- **Dynamic URL:** `defaultReturnUrl` includes `fundingRequestId` parameter
+
+### **Funding Notice DocuSign**
+- **Trigger:** When funding notice is auto-generated with `PENDING_ESIGN` status
+- **Process:** Borrower completes DocuSign for funding notice
+- **Result:** Funding notice status changes to `ESIGN_COMPLETED` + FT tokens created
+- **Endpoint:** `GET /docusign/signing-complete?envelopeRequest=fundingNoticeSign&envelopeId=123&fundingNoticeId=FN-456`
+- **Dynamic URL:** `defaultReturnUrl` includes `fundingNoticeId` parameter
+
+### **Term Sheet DocuSign**
+- **Trigger:** When term sheet status is `DRAFT`
+- **Process:** Borrower completes DocuSign
+- **Result:** Term sheet status changes to `BorrowerSigned`
+- **Endpoint:** `GET /docusign/signing-complete?envelopeRequest=termSheetSign&envelopeId=123&termSheetId=TS-456`
+- **Dynamic URL:** `defaultReturnUrl` includes `termSheetId` parameter
+
+## 📊 Response Format
+
+All APIs return responses in the following standardized format:
+
+### Success Response
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Operation completed successfully",
+  "result": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+### Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `404` - Resource not found
+- `500` - Internal server error
+
+## 📋 Workflow
+
+The Credit Facility module follows a specific workflow order:
+
+### **1. Term Sheet (First Flow)**
+- Create and manage term sheets
+- Define initial terms and conditions  
+- Submit for market maker review
+- **Market maker approval triggers automatic master commitment creation**
+
+### **2. Master Commitment (Second Flow)**
+- **Auto-created when term sheet is approved**
+- **Pre-populated with term sheet data**
+- Configure collateral eligibility rules
+- Manage lender groups and commitments
+- Submit for lender DocuSign approval
+- **Any lender's DocuSign completion activates the master commitment**
+
+### **3. Funding Request (Third Flow)**
+- Create funding requests against ACTIVE master commitments
+- Submit for facility agent approval
+- Facility agent review and decision process
+- **Facility agent DocuSign completion triggers funding notice generation**
+
+### **4. Funding Notice (Fourth Flow)**
+- **Auto-generated when funding request is approved**
+- **Pre-populated with funding request data**
+- Borrower DocuSign completion creates FT tokens
+- Borrower approves token transfer to make notice visible to lenders
+- Individual lenders confirm fund transfers
+- **Per-lender tracking instead of global status**
+
+---
+
+## 📄 Term Sheet APIs (10 APIs)
+
+### Core Operations (7 APIs) - Main term sheet management functions
+- **Borrower Actions (4 APIs):** Create Term Sheet, Get Term Sheet by ID, Update Term Sheet, Submit Term Sheet
+- **Facility Agent Actions (3 APIs):** Accept Term Sheet, Reject Term Sheet, Request Changes
+
+### Auto-Save Operations (1 API) - Automatic data saving to prevent loss
+- **Borrower Actions (1 API):** Auto-Save Term Sheet Field
+
+### Document Management (2 APIs) - File upload and preview functionality
+- **Borrower Actions (2 APIs):** Upload Term Sheet Document, Preview Term Sheet
+
+### Core Operations
+
+#### Create Term Sheet
+**Endpoint:** `POST /cf/createTermSheet`
+
+**Request Body:**
+```json
+{
+  "termSheetName": "ABC Credit Facility Term Sheet",
+  "issuerOrgName": "ABC Corporation",
+  "requestedCommitmentAmount": 50000000,
+  "advanceRate": 85.0,
+  "pricingIndex": "SOFR",
+  "margin": 2.5,
+  "maturityDate": "12/31/2025",
+  "fixedRate": 5.5,
+  "covenantTemplate": "Standard Commercial",
+  "drawFrequency": "Monthly",
+  "marketMakerOrgId": "MM-ORG-67890",
+  "issuerId": "ISSUER-001",
+  "issuerOrgId": "ORG-12345"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet created successfully",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "id": "mongodb-object-id"
+  }
+}
+```
+
+#### Get Term Sheet by ID
+**Endpoint:** `GET /cf/getTermSheet/:termSheetId`
+
+**Path Parameters:**
+- `termSheetId` (required): Term sheet identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "termSheetName": "ABC Credit Facility Term Sheet",
+    "issuerOrgName": "ABC Corporation",
+    "requestedCommitmentAmount": 50000000,
+    "advanceRate": 85.0,
+    "pricingIndex": "SOFR",
+    "margin": 2.5,
+    "maturityDate": "2025-12-31T00:00:00Z",
+    "fixedRate": 5.5,
+    "covenantTemplate": "Standard Commercial",
+    "drawFrequency": "Monthly",
+    "status": "Draft",
+    "module": "creditFacility",
+    "createdAt": "2024-12-01T10:00:00Z",
+    "updatedAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Update Term Sheet
+**Endpoint:** `PUT /cf/updateTermSheet/:termSheetId`
+
+**Path Parameters:**
+- `termSheetId` (required): Term sheet identifier
+
+**Request Body:**
+```json
+{
+  "termSheetName": "Updated CF Term Sheet",
+  "requestedCommitmentAmount": 75000000,
+  "advanceRate": 87.5,
+  "status": "Under Review"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet updated successfully"
+}
+```
+
+#### Submit Term Sheet
+**Endpoint:** `POST /cf/submitTermSheet/:termSheetId`
+
+**Path Parameters:**
+- `termSheetId` (required): Term sheet identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet submitted successfully"
+}
+```
+
+### Auto-Save Operations
+
+#### Auto-Save Term Sheet
+**Endpoint:** `POST /cf/autoSaveTermSheet/:termSheetId`
+
+**Request Body:**
+```json
+{
+  "fieldName": "termSheetName",
+  "fieldValue": "Updated Term Sheet Name"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Field auto-saved successfully",
+  "result": {
+    "fieldName": "termSheetName",
+    "fieldValue": "Updated Term Sheet Name",
+    "savedAt": "2024-12-01T10:30:00Z"
+  }
+}
+```
+
+### Document Management
+
+#### Upload Document
+**Endpoint:** `POST /cf/uploadTermSheetDocument/:termSheetId`
+
+**Request Format:** `multipart/form-data`
+**File Field:** Document file
+**Body Parameters:**
+- `fileType` (required): Type of document
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Supporting document uploaded successfully",
+  "result": {
+    "ipfsHash": "QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "filename": "financial_statements.pdf"
+  }
+}
+```
+
+#### Preview Term Sheet
+**Endpoint:** `GET /cf/previewTermSheet/:termSheetId`
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet preview retrieved successfully",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "termSheetName": "ABC Credit Facility Term Sheet",
+    "signedPdf": {
+      "ipfsHash": "QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "filename": "signed_term_sheet.pdf",
+      "signedAt": "2024-12-01T11:00:00Z"
+    },
+    "signerStatus": "Signed",
+    "canSubmit": true
+  }
+}
+```
+
+### Facility Agent Actions
+
+#### Accept Term Sheet
+**Endpoint:** `POST /cf/acceptTermSheet/:termSheetId`
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet accepted successfully",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "status": "Accepted",
+    "acceptedBy": "market-maker-user-id",
+    "acceptedAt": "2024-12-01T12:00:00Z",
+    "masterCommitmentCreated": true
+  }
+}
+```
+
+#### Reject Term Sheet
+**Endpoint:** `POST /cf/rejectTermSheet/:termSheetId`
+
+**Request Body:**
+```json
+{
+  "comments": "Deal structure needs revision"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Term sheet rejected successfully",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "status": "Rejected",
+    "rejectedBy": "market-maker-user-id",
+    "rejectedAt": "2024-12-01T12:00:00Z",
+    "comments": "Deal structure needs revision"
+  }
+}
+```
+
+#### Request Changes
+**Endpoint:** `POST /cf/requestChanges/:termSheetId`
+
+**Request Body:**
+```json
+{
+  "comments": "Please adjust LTV to 75%"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Change request submitted successfully",
+  "result": {
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "requestId": "CR-uuid-generated-1",
+    "status": "CHANGES_REQUESTED",
+    "requestedBy": "market-maker-user-id",
+    "changesRequestedAt": "2024-12-01T12:00:00Z",
+    "comments": "Please adjust LTV to 75%",
+    "sequence": 1,
+    "totalChangeRequests": 1,
+    "newRevisionNumber": 2,
+    "docusignStatus": "Reset - Must Re-sign",
+    "canEdit": true,
+    "canSign": true,
+    "canSubmit": false
+  }
+}
+```
+
+
+---
+
+## 🏢 Master Commitment APIs (6 APIs)
+
+### Core Operations (4 APIs) - Main master commitment management functions
+- **Facility Agent Actions (4 APIs):** Create Master Commitment, Get Master Commitment by ID, Get Master Commitment by Term Sheet, Update Master Commitment
+
+### Auto-Save Operations (1 API) - Automatic data saving to prevent loss
+- **Facility Agent Actions (1 API):** Auto-Save Field
+
+### Facility Setup Model Operations (1 API) - Track facility setup model completion
+- **Facility Agent Actions (1 API):** Complete Facility Setup Model
+
+
+#### Create Master Commitment
+**Endpoint:** `POST /cf/createMasterCommitment`
+
+**Request Body:**
+```json
+{
+  "termSheetId": "TS-20241201-1701234567-abc123",
+  "payingAgentOrgId": "PA-ORG-12345",
+  "totalCommitmentAmount": 50000000,
+  "collateralRules": [
+    {
+      "ruleGroupNumber": 1,
+      "ruleGroupName": "Loan Eligibility Rules",
+      "rules": [
+        {
+          "ruleId": "uuid-generated",
+          "ruleType": "loanTypeEligibility",
+          "loanType": "Residential Mortgage",
+          "minFICO": 680,
+          "maxLTV": 80,
+          "minLoanAmount": 100000,
+          "isActive": true
+        }
+      ]
+    }
+  ],
+  "lenderGroups": [
+    {
+      "lenderGroupId": "uuid-generated",
+      "lenderName": "ABC Bank",
+      "lenderOrgId": "LENDER-ORG-12345",
+      "commitmentAmount": 25000000,
+      "votingPercentage": 50,
+      "lenderEmail": "contact@abcbank.com",
+      "lenderContactPerson": "John Doe",
+      "lenderPhone": "+1-555-0123",
+      "notes": "Primary lender",
+      "status": "Active"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Master commitment finalized and submitted for lender DocuSign approval",
+  "result": {
+    "masterCommitmentId": "MC-20241201-1701234567-def456",
+    "internalId": "uuid-generated",
+    "status": "PendingLenderApproval",
+    "submittedAt": "2024-12-01T17:01:23.456Z",
+    "canEdit": false,
+    "nextStep": "Waiting for lender DocuSign completion"
+  }
+}
+```
+
+#### Get Master Commitment by ID
+**Endpoint:** `GET /cf/getMasterCommitment/:masterCommitmentId`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "result": {
+    "masterCommitmentId": "MC-20241201-1701234567-def456",
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "facilityType": "Revolving Credit",
+    "advanceRate": 85.0,
+    "margin": 2.5,
+    "pricingIndex": "SOFR 1M",
+    "maturityDate": "2025-12-01T00:00:00Z",
+    "drawFrequency": "Monthly",
+    "covenantTemplate": "Standard",
+    "marketMakerOrgId": "MM-ORG-67890",
+    "facilityAgentOrgName": "ABC Credit Facility Corp",
+    "issuerOrgId": "ORG-12345",
+    "issuerOrgName": "Sample Issuer Corp",
+    "payingAgentOrgId": "PA-ORG-12345",
+    "payingAgentOrgName": "Trustee Bank",
+    "trustee": "Trustee Bank",
+    "totalCommitmentAmount": 50000000,
+    "collateralRules": [...],
+    "lenderGroups": [...],
+    "status": "DRAFT",
+    "module": "creditFacility",
+    "createdAt": "2024-12-01T10:00:00Z",
+    "updatedAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Get Master Commitment by Term Sheet
+**Endpoint:** `GET /cf/getMasterCommitmentByTermSheet/:termSheetId`
+
+**Path Parameters:**
+- `termSheetId` (required): Term sheet identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "message": "Master commitment retrieved successfully",
+  "module": "creditFacility",
+  "result": {
+    "masterCommitmentId": "MC-20241201-1701234567-def456",
+    "termSheetId": "TS-20241201-1701234567-abc123",
+    "status": "Draft",
+    "canEdit": true,
+    "isExisting": true,
+    "termSheetStatus": "Accepted",
+    "facilityType": "Revolving Credit",
+    "advanceRate": 85.0,
+    "pricingIndex": "SOFR 1M",
+    "maturityDate": "2025-12-01T00:00:00Z",
+    "drawFrequency": "Monthly",
+    "covenantTemplate": "Standard",
+    "trustee": null,
+    "totalCommitmentAmount": null,
+    "requiredFieldsCompleted": false
+  }
+}
+```
+
+### Auto-Save Operations
+
+#### Auto-Save Field
+**Endpoint:** `POST /cf/autoSaveField/:masterCommitmentId`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+
+**Request Body:**
+```json
+{
+  "fieldName": "totalCommitmentAmount",
+  "fieldValue": 75000000
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Field auto-saved successfully",
+  "result": {
+    "fieldName": "totalCommitmentAmount",
+    "fieldValue": 75000000,
+    "savedAt": "2024-12-01T10:30:00Z"
+  }
+}
+```
+
+### Facility Setup Model Operations
+
+#### Complete Facility Setup Model
+**Endpoint:** `PUT /cf/master-commitments/:masterCommitmentId/facility-setup-model/complete`
+
+**Description:** Mark the facility setup model as completed for an ACTIVE master commitment.
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+
+**Request Body:** None required
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Facility setup model completed successfully",
+  "masterCommitmentId": "MC-123",
+  "facilitySetupModelStatus": "Completed"
+}
+```
+
+**Business Rules:**
+- Only ACTIVE master commitments can have facility setup model completed
+- Can only be completed once (prevents duplicate completion)
+- Updates `facilitySetupModelStatus` from 'In Progress' to 'Completed'
+- Adds entry to action history
+
+**Status Values:**
+- `'In Progress'` - Facility agent working on the model (default when ACTIVE)
+- `'Completed'` - Facility agent finished the model (one-time action)
+
+
+
+
+## 📋 Funding Request APIs (9 APIs)
+
+### Core Operations (7 APIs) - Main funding request management functions
+- **Borrower Actions (4 APIs):** Check or Create Draft, Update Funding Request, Submit Funding Request, Check Funding Request Readiness
+- **Facility Agent Actions (3 APIs):** Approve Funding Request, Reject Funding Request, Request Changes
+
+### Auto-Save Operations (2 APIs) - Automatic data saving to prevent loss
+- **Borrower Actions (2 APIs):** Auto-Save Funding Request Field, Get Funding Request Auto-Save Status
+
+### Document Management (1 API) - File upload capabilities
+- **Borrower Actions (1 API):** Upload Collateral Addendum
+
+
+### Core Operations
+
+#### Check or Create Draft
+**Endpoint:** `GET /cf/:masterCommitmentId/funding-requests/check-draft`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+
+**Query Parameters:**
+- `issuerOrgId` (required): Issuer organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Draft funding request retrieved successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "masterCommitmentId": "MC-20241201-1701234567-def456",
+    "issuerOrgId": "ORG-12345",
+    "issuerOrgName": "Sample Issuer Corp",
+    "marketMakerOrgId": "MM-ORG-67890",
+    "facilityAgentOrgName": "ABC Credit Facility Corp",
+    "requestedAmount": 10000000,
+    "purpose": "Working capital",
+    "collateralDescription": "Residential mortgage loans",
+    "status": "DRAFT",
+    "isExisting": true,
+    "canEdit": true,
+    "createdAt": "2024-12-01T10:00:00Z",
+    "updatedAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Update Funding Request
+**Endpoint:** `PUT /cf/:masterCommitmentId/funding-requests/:fundingRequestId`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "requestedAmount": 15000000,
+  "purpose": "Working capital and expansion",
+  "collateralDescription": "Residential mortgage loans with 680+ FICO",
+  "drawdownSchedule": "Monthly",
+  "useOfProceeds": "Originate new loans",
+  "collateralAddendum": "IPFS-ipfsHash-if-uploaded"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Funding request updated successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "updatedFields": ["requestedAmount", "purpose", "collateralDescription"],
+    "updatedAt": "2024-12-01T10:30:00Z"
+  }
+}
+```
+
+#### Submit Funding Request
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/submit`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Funding request submitted for market maker review successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "status": "FAReview",
+    "submittedAt": "2024-12-01T11:00:00Z",
+    "canEdit": false,
+    "nextStep": "Waiting for market maker review"
+  }
+}
+```
+
+#### Check Funding Request Readiness
+**Endpoint:** `GET /cf/checkFundingRequestReadiness/:fundingRequestId`
+
+**Path Parameters:**
+- `fundingRequestId` (required): Funding request identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "result": {
+    "isReady": true,
+    "missingFields": [],
+    "validationErrors": [],
+    "readinessScore": 100,
+    "requiredFields": [
+      "requestedAmount",
+      "purpose",
+      "collateralDescription"
+    ],
+    "completedFields": [
+      "requestedAmount",
+      "purpose",
+      "collateralDescription",
+      "drawdownSchedule",
+      "useOfProceeds"
+    ]
+  }
+}
+```
+
+### Auto-Save Operations
+
+#### Auto-Save Funding Request Field
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/auto-save`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "fieldName": "requestedAmount",
+  "fieldValue": 12000000
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Field auto-saved successfully",
+  "result": {
+    "fieldName": "requestedAmount",
+    "fieldValue": 12000000,
+    "savedAt": "2024-12-01T10:45:00Z"
+  }
+}
+```
+
+#### Get Funding Request Auto-Save Status
+**Endpoint:** `GET /cf/:masterCommitmentId/funding-requests/:fundingRequestId/auto-save-status`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "result": {
+    "lastSavedAt": "2024-12-01T10:45:00Z",
+    "autoSaveEnabled": true,
+    "lastSavedField": "requestedAmount",
+    "unsavedChanges": false
+  }
+}
+```
+
+### Facility Agent Actions
+
+#### Approve Funding Request
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/approve`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "approvalNotes": "Funding request approved based on strong collateral quality",
+  "approvedAmount": 15000000,
+  "conditions": "Standard terms apply"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Funding request approved successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "status": "APPROVED",
+    "approvedAt": "2024-12-01T14:00:00Z",
+    "approvedAmount": 15000000,
+    "nextStep": "Generate funding notice"
+  }
+}
+```
+
+#### Reject Funding Request
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/reject`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "rejectionReason": "Insufficient collateral documentation",
+  "suggestions": "Please provide additional collateral details"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Funding request rejected",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "status": "REJECTED",
+    "rejectedAt": "2024-12-01T14:30:00Z",
+    "rejectionReason": "Insufficient collateral documentation",
+    "canResubmit": true
+  }
+}
+```
+
+#### Request Changes
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/request-changes`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "changeRequest": "Please provide additional collateral details",
+  "requiredFields": ["collateralAddendum"],
+  "deadline": "2024-12-15T23:59:59Z"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Changes requested successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "status": "CHANGES_REQUESTED",
+    "changeRequestedAt": "2024-12-01T15:00:00Z",
+    "changeRequest": "Please provide additional collateral details",
+    "deadline": "2024-12-15T23:59:59Z"
+  }
+}
+```
+
+### Document Management
+
+#### Upload Collateral Addendum
+**Endpoint:** `POST /cf/:masterCommitmentId/funding-requests/:fundingRequestId/collateral`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+- `fundingRequestId` (required): Funding request identifier
+
+**Request Body:**
+```json
+{
+  "file": "multipart/form-data",
+  "documentType": "collateral_addendum",
+  "description": "Detailed collateral documentation"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Collateral addendum uploaded successfully",
+  "result": {
+    "fundingRequestId": "FR-20241201-1701234567-ghi789",
+    "documentId": "DOC-20241201-1701234567-jkl012",
+    "ipfsHash": "QmX...",
+    "fileName": "collateral_addendum.pdf",
+    "uploadedAt": "2024-12-01T12:00:00Z"
+  }
+}
+```
+
+
+---
+
+## 📄 Funding Notice APIs (3 APIs)
+
+### Core Operations (3 APIs) - Main funding notice management functions
+- **Borrower Actions (1 API):** Approve Token Transfer
+- **Lender Actions (2 APIs):** Confirm Fund Transfer, Update Lender Status
+
+
+
+### Approve Token Transfer
+**Endpoint:** `POST /cf/funding-notices/:fundingNoticeId/approve-token-transfer`
+
+**Description:** Borrower approves FT token transfer privilege. Changes funding notice status from `ESIGN_COMPLETED` to `ISSUED`.
+
+**Path Parameters:**
+- `fundingNoticeId` (required): Funding notice identifier
+
+**Request Body:**
+```json
+{
+  "privateKey": "string",
+  "issuerAddress": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Token transfer approved successfully",
+  "result": {
+    "fundingNoticeId": "FN-20241201-1701234567-mno345",
+    "ftContractAddress": "0x1234567890abcdef...",
+    "intainAdminWalletAddress": "0xabcdef1234567890...",
+    "totalSupply": 15000000,
+    "approvalTransactionHash": "0x9876543210fedcba...",
+    "message": "Token transfer privilege approved successfully. Tokens can now be distributed to lenders."
+  }
+}
+```
+
+### Confirm Fund Transfer
+**Endpoint:** `POST /cf/funding-notices/:fundingNoticeId/confirm-fund-transfer`
+
+**Description:** Lender confirms fund transfer completion. Updates individual lender status in tokenDistribution array.
+
+**Path Parameters:**
+- `fundingNoticeId` (required): Funding notice identifier
+
+**Request Body:**
+```json
+{
+  "lenderOrgId": "string",
+  "userId": "string",
+  "confirmationNote": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Fund transfer confirmed successfully",
+  "result": {
+    "fundingNoticeId": "FN-20241201-1701234567-mno345",
+    "lenderOrgId": "LENDER-456",
+    "message": "Fund transfer confirmed successfully"
+  }
+}
+```
+
+### Update Lender Status
+**Endpoint:** `PATCH /cf/funding-notices/:fundingNoticeId/:lenderOrgId/status`
+
+**Description:** Updates the approval status for a specific lender in a funding notice.
+
+**Path Parameters:**
+- `fundingNoticeId` (required): Funding notice identifier
+- `lenderOrgId` (required): Lender organization identifier
+
+**Request Body:**
+```json
+{
+  "status": "PENDING | APPROVED | REJECTED"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Lender status updated successfully"
+}
+```
+
+### Update Token Distribution
+**Endpoint:** `PATCH /cf/funding-notices/:fundingNoticeId/token-distribution`
+
+**Description:** Updates the entire token distribution array for a funding notice. Only allowed when status is PENDING_ESIGN.
+
+**Path Parameters:**
+- `fundingNoticeId` (required): Funding notice identifier
+
+**Request Body:**
+```json
+{
+  "tokenDistribution": [
+    {
+      "lenderOrgId": "string",
+      "lenderName": "string",
+      "tokensAllocated": "number",
+      "lenderApprovalStatus": "PENDING | APPROVED | REJECTED",
+      "mintingStatus": "pending | completed",
+      "amountTransferred": "pending | transferred"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "creditFacility",
+  "message": "Token distribution updated successfully"
+}
+```
+
+---
+
+## 🏢 Facility Overview APIs (5 APIs)
+
+### Core Operations (5 APIs) - Main facility overview functions
+- **Borrower Actions (1 API):** Get Issuer Facility Overview
+- **Facility Agent Actions (2 APIs):** Get Facility Agent Setup Facility, Get Facility Agent Active Facility
+- **Lender Actions (2 APIs):** Get Lender Facility Overview, Get Lender Opportunities
+
+### Issuer Facility Overview
+**Endpoint:** `GET /cf/issuers/:issuerOrgId/facility`
+
+**Path Parameters:**
+- `issuerOrgId` (required): Issuer organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "result": {
+    "issuerOrgId": "ORG-12345",
+    "termSheets": [...],
+    "masterCommitments": [...],
+    "fundingRequests": [...],
+    "fundingNotices": [...],
+    "summary": {
+      "totalTermSheets": 5,
+      "totalMasterCommitments": 3,
+      "totalFundingRequests": 8,
+      "totalFundingNotices": 2
+    },
+    "apiStatus": {
+      "termSheetApi": "success",
+      "masterCommitmentApi": "success",
+      "fundingRequestApi": "success",
+      "fundingNoticeApi": "success"
+    }
+  }
+}
+```
+
+### Facility Agent Setup Facility
+**Endpoint:** `GET /cf/marketmakers/:marketMakerOrgId/setup-facility`
+
+**Path Parameters:**
+- `marketMakerOrgId` (required): Facility agent organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "marketMakerOrgId": "MM-ORG-67890",
+  "isSuccess": true,
+  "result": {
+    "termSheets": [...],
+    "masterCommitments": [...]
+  },
+  "apiStatus": {
+    "termSheetApi": "success",
+    "masterCommitmentApi": "success"
+  },
+  "summary": {
+    "totalTermSheets": 3,
+    "totalMasterCommitments": 2
+  }
+}
+```
+
+### Facility Agent Active Facility
+**Endpoint:** `GET /cf/marketmakers/:marketMakerOrgId/active-facility`
+
+**Path Parameters:**
+- `marketMakerOrgId` (required): Facility agent organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "marketMakerOrgId": "MM-ORG-67890",
+  "isSuccess": true,
+  "result": {
+    "masterCommitments": [...],
+    "fundingRequests": [...],
+    "fundingNotices": [...]
+  },
+  "apiStatus": {
+    "masterCommitmentApi": "success",
+    "fundingRequestApi": "success",
+    "fundingNoticeApi": "success"
+  },
+  "summary": {
+    "totalMasterCommitments": 2,
+    "totalFundingRequests": 5,
+    "totalFundingNotices": 3
+  }
+}
+```
+
+### Lender Facility Overview
+**Endpoint:** `GET /cf/lenders/:lenderOrgId/facility`
+
+**Path Parameters:**
+- `lenderOrgId` (required): Lender organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "lenderOrgId": "LENDER-ORG-12345",
+  "isSuccess": true,
+  "result": {
+    "masterCommitments": [...],
+    "fundingNotices": [...]
+  },
+  "apiStatus": {
+    "masterCommitmentApi": "success",
+    "fundingNoticeApi": "success"
+  },
+  "summary": {
+    "totalMasterCommitments": 4,
+    "totalFundingNotices": 2
+  }
+}
+```
+
+### Lender Opportunities
+**Endpoint:** `GET /cf/lenders/:lenderOrgId/oppurtunities`
+
+**Path Parameters:**
+- `lenderOrgId` (required): Lender organization identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "lenderOrgId": "LENDER-ORG-12345",
+  "isSuccess": true,
+  "result": {
+    "masterCommitments": [...]
+  }
+}
+```
+
+---
+
+## 📊 CF Overview & Document APIs (3 APIs)
+
+### Core Operations (3 APIs) - Main CF overview and document functions
+- **Borrower Actions (1 API):** Get CF Overview
+- **Facility Agent Actions (1 API):** Update Servicer Organization ID
+- **All Roles (1 API):** Download Documents
+
+### Get CF Overview
+**Endpoint:** `GET /cf/getCFOverview/:issuerOrgId`
+
+**Path Parameters:**
+- `issuerOrgId` (required): Issuer organization identifier
+
+**Query Parameters:**
+- `issuerId` (required): Issuer identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "data": {
+    "activeMasterCommitments": 3,
+    "pendingSignatures": 1,
+    "draftTermSheets": 2
+  }
+}
+```
+
+### Update Servicer Organization ID
+**Endpoint:** `PUT /cf/updateServicerOrgId/:masterCommitmentId`
+
+**Path Parameters:**
+- `masterCommitmentId` (required): Master commitment identifier
+
+**Request Body:**
+```json
+{
+  "servicerOrgId": "SERVICER-ORG-12345"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "message": "Servicer organization ID updated successfully"
+}
+```
+
+### Download Documents
+**Endpoint:** `GET /cf/:entityType/:entityId/documents/*`
+
+**Path Parameters:**
+- `entityType` (required): Type of entity (term-sheets, master-commitments, funding-requests, funding-notices)
+- `entityId` (required): Entity identifier
+- `documentPath` (required): Document path (e.g., signedPdf, collateralAddendum, supportingDocuments/collateralProfile)
+
+**Response:** Binary file download
+
+**Supported Entity Types:**
+- `term-sheets`: signedPdf, supportingDocuments
+- `master-commitments`: signedPdf, termSheetPdf
+- `funding-requests`: collateralAddendum, financialStatements, kycDocuments
+- `funding-notices`: signedPdf
+
+---
+
+## 🔗 Loan Mapping APIs (1 API)
+
+### Map Loans to Credit Facility
+**Endpoint:** `POST /cf/maploanstofacility`
+
+**Description:** Borrower maps selected loans to a credit facility.
+
+**Request Body:**
+```json
+{
+  "jobId": "JOB-20241201-1701234567",
+  "selectAll": false,
+  "selectedLoans": ["LOAN-001", "LOAN-002", "LOAN-003"],
+  "issuerId": "ISSUER-001",
+  "dealId": "DEAL-20241201-1701234567",
+  "issuerOrgId": "ORG-12345",
+  "dealName": "ABC Credit Facility"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "message": "Pool Updated Successfully",
+  "data": {
+    "loansUpdated": 3,
+    "previewsUpdated": 3,
+    "loansProcessed": 3
+  }
+}
+```
+
+**Business Rules:**
+- Loans must not be already mapped to another facility
+- All selected loans must belong to the same issuer
+- Loans with "Contract Digitized" = "No" cannot be mapped
+
+---
+
+
+## 📊 Data Models
+
+### Term Sheet Model
+```json
+{
+  "termSheetId": "string",
+  "termSheetName": "string",
+  "issuerOrgName": "string",
+  "requestedCommitmentAmount": "number",
+  "advanceRate": "number",
+  "pricingIndex": "string",
+  "margin": "number",
+  "maturityDate": "string",
+  "fixedRate": "number",
+  "covenantTemplate": "string",
+  "drawFrequency": "string",
+  "marketMakerOrgId": "string",
+  "issuerId": "string",
+  "issuerOrgId": "string",
+  "status": "string",
+  "module": "string",
+  "moduleVersion": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Master Commitment Model
+```json
+{
+  "masterCommitmentId": "string",
+  "termSheetId": "string",
+  "facilityType": "string",
+  "advanceRate": "number",
+  "margin": "number",
+  "pricingIndex": "string",
+  "maturityDate": "string",
+  "drawFrequency": "string",
+  "covenantTemplate": "string",
+  "marketMakerOrgId": "string",
+  "issuerOrgId": "string",
+  "payingAgentOrgId": "string",
+  "trustee": "string",
+  "totalCommitmentAmount": "number",
+  "collateralRules": "array",
+  "lenderGroups": "array",
+  "status": "string",
+  "facilitySetupModelStatus": "string",
+  "module": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Funding Request Model
+```json
+{
+  "fundingRequestId": "string",
+  "masterCommitmentId": "string",
+  "issuerOrgId": "string",
+  "marketMakerOrgId": "string",
+  "issuerId": "string",
+  "facilityName": "string",
+  "totalCommitmentAmount": "number",
+  "totalOutstandingDraws": "number",
+  "availableCapacity": "number",
+  "borrowingBase": "number",
+  "bbCalculation": "string",
+  "commitmentCurrency": "string",
+  "commitmentStatus": "string",
+  "commitmentType": "string",
+  "advanceRate": "number",
+  "drawAmount": "number",
+  "drawCurrency": "string",
+  "fundingDate": "string",
+  "purposeOfFunds": "string",
+  "notes": "string",
+  "collateralAddendum": "object",
+  "collateralAddendumHistory": "array",
+  "financialStatements": "object",
+  "financialStatementsHistory": "array",
+  "kycDocuments": "object",
+  "kycDocumentsHistory": "array",
+  "revisionNumber": "number",
+  "previousVersions": "array",
+  "changeRequests": "array",
+  "changeRequestsCount": "number",
+  "lastChangeRequestedAt": "string",
+  "lastChangeRequestedBy": "string",
+  "submittedAt": "string",
+  "submittedBy": "string",
+  "submissionCount": "number",
+  "autoSaveCount": "number",
+  "lastAutoSaveAt": "string",
+  "isAutoSaved": "boolean",
+  "statusHistory": "array",
+  "actionHistory": "array",
+  "status": "string",
+  "type": "string",
+  "module": "string",
+  "moduleVersion": "string",
+  "createdAt": "string",
+  "updatedAt": "string",
+  "createdBy": "string",
+  "updatedBy": "string"
+}
+```
+
+### Funding Notice Model
+```json
+{
+  "fundingNoticeId": "string",
+  "fundingRequestId": "string",
+  "masterCommitmentId": "string",
+  "facilityName": "string",
+  "requestAmount": "number",
+  "issuerOrgId": "string",
+  "issuerId": "string",
+  "marketMakerOrgId": "string",
+  "fundingDate": "string",
+  "issuedDate": "string",
+  "ftContractAddress": "string",
+  "ftTokenId": "string",
+  "tokenDistribution": [
+    {
+      "lenderGroupId": "string",
+      "lenderOrgId": "string",
+      "lenderName": "string",
+      "votingPercentage": "number",
+      "commitmentAmount": "number",
+      "tokensAllocated": "number",
+      "tokenContractAddress": "string",
+      "mintedAt": "string",
+      "transactionHash": "string",
+      "mintingStatus": "string",
+      "lenderApprovalStatus": "PENDING | APPROVED | REJECTED"
+    }
+  ],
+  "status": "string",
+  "type": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+---
+
+## ⚠️ Error Handling
+
+### Standard Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+### Common Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `404` - Resource not found
+- `500` - Internal server error
+
+### Error Types
+- **Validation Errors** - Missing required fields, invalid data types
+- **Business Logic Errors** - Invalid status transitions, insufficient capacity
+- **Authentication Errors** - Unauthorized access, invalid permissions
+- **System Errors** - Database connection issues, external service failures
+
+---
+
+**Module Version:** 1.0.0  
+**Last Updated:** September 2025  
+**Maintained by:** Intain Markets Development Team

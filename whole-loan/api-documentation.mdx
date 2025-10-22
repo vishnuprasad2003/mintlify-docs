@@ -1,0 +1,307 @@
+---
+title: "Whole Loan Flow API"
+description: "Complete API documentation for loan lifecycle management from origination to servicing"
+---
+
+# Whole Loan Flow - API Documentation
+
+## 📋 Overview
+
+The Whole Loan Flow module provides comprehensive APIs for managing complete loan lifecycle operations from origination to servicing. This module handles loan creation, processing, servicing, and reporting.
+
+**Base URL:** `/loans/`  
+**Module:** `wholeLoan`  
+**Version:** `1.0.0`  
+**Collections:** `loan_origination`, `loan_servicing`, `loan_reporting`
+
+<Note>
+**Base URLs:**
+- **Test Network:** `https://imuat.intainmarkets.us/`
+- **Production Network:** `https://intainmarkets.us/`
+</Note>
+
+## 🎯 **API Summary**
+
+### **📄 Loan Origination APIs (3 APIs)**
+- **Core Operations (3 APIs):** Create Loan Application, Submit Loan Application, Get Loan Status
+
+### **🏢 Loan Servicing APIs (2 APIs)**
+- **Core Operations (2 APIs):** Update Loan Payment, Generate Payment Statement
+
+**Total: 5 APIs** across all modules
+
+## 🔗 Table of Contents
+
+- [Authentication](#authentication)
+- [Response Format](#response-format)
+- [Loan Origination APIs](#loan-origination-apis)
+- [Loan Servicing APIs](#loan-servicing-apis)
+- [Data Models](#data-models)
+- [Error Handling](#error-handling)
+
+## 🔐 Authentication
+
+All API endpoints require proper authentication. User context should be provided through request headers or middleware.
+
+```http
+Content-Type: application/json
+User-Agent: Whole-Loan-Client/1.0
+```
+
+## 📊 Response Format
+
+All APIs return responses in the following standardized format:
+
+### Success Response
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "message": "Operation completed successfully",
+  "result": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+---
+
+## 📄 Loan Origination APIs (3 APIs)
+
+### Core Operations (3 APIs) - Main loan origination functions
+- **Borrower Actions (3 APIs):** Create Loan Application, Submit Loan Application, Get Loan Status
+
+### Core Operations
+
+#### Create Loan Application
+**Endpoint:** `POST /loans/create-application`
+
+**Request Body:**
+```json
+{
+  "borrowerName": "John Doe",
+  "loanAmount": 500000,
+  "loanType": "Residential Mortgage",
+  "propertyAddress": "123 Main St, City, State 12345",
+  "propertyValue": 600000,
+  "borrowerIncome": 120000,
+  "creditScore": 750,
+  "downPayment": 100000,
+  "loanPurpose": "Primary Residence"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "message": "Loan application created successfully",
+  "result": {
+    "applicationId": "LA-20241201-1701234567-abc123",
+    "status": "DRAFT",
+    "createdAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Submit Loan Application
+**Endpoint:** `POST /loans/submit-application/:applicationId`
+
+**Path Parameters:**
+- `applicationId` (required): Loan application identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "message": "Loan application submitted successfully",
+  "result": {
+    "applicationId": "LA-20241201-1701234567-abc123",
+    "status": "SUBMITTED",
+    "submittedAt": "2024-12-01T11:00:00Z",
+    "nextStep": "Under Review"
+  }
+}
+```
+
+#### Get Loan Status
+**Endpoint:** `GET /loans/status/:applicationId`
+
+**Path Parameters:**
+- `applicationId` (required): Loan application identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "result": {
+    "applicationId": "LA-20241201-1701234567-abc123",
+    "status": "APPROVED",
+    "loanAmount": 500000,
+    "interestRate": 6.5,
+    "termMonths": 360,
+    "monthlyPayment": 3160.34,
+    "approvedAt": "2024-12-01T14:00:00Z",
+    "closingDate": "2024-12-15T00:00:00Z"
+  }
+}
+```
+
+---
+
+## 🏢 Loan Servicing APIs (2 APIs)
+
+### Core Operations (2 APIs) - Main loan servicing functions
+- **Servicer Actions (2 APIs):** Update Loan Payment, Generate Payment Statement
+
+### Core Operations
+
+#### Update Loan Payment
+**Endpoint:** `POST /loans/payment/:loanId`
+
+**Path Parameters:**
+- `loanId` (required): Loan identifier
+
+**Request Body:**
+```json
+{
+  "paymentAmount": 3160.34,
+  "paymentDate": "2024-12-01T00:00:00Z",
+  "paymentType": "Regular Payment",
+  "principalAmount": 2000.00,
+  "interestAmount": 1160.34,
+  "escrowAmount": 0.00
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "message": "Payment recorded successfully",
+  "result": {
+    "loanId": "LOAN-20241201-1701234567-def456",
+    "paymentId": "PAY-20241201-1701234567-ghi789",
+    "remainingBalance": 498000.00,
+    "nextPaymentDue": "2025-01-01T00:00:00Z"
+  }
+}
+```
+
+#### Generate Payment Statement
+**Endpoint:** `GET /loans/statement/:loanId`
+
+**Path Parameters:**
+- `loanId` (required): Loan identifier
+
+**Query Parameters:**
+- `statementDate` (optional): Statement date (defaults to current month)
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "wholeLoan",
+  "result": {
+    "loanId": "LOAN-20241201-1701234567-def456",
+    "statementPeriod": "December 2024",
+    "beginningBalance": 500000.00,
+    "endingBalance": 498000.00,
+    "totalPayments": 3160.34,
+    "principalPaid": 2000.00,
+    "interestPaid": 1160.34,
+    "statementDate": "2024-12-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+## 📊 Data Models
+
+### Loan Application Model
+```json
+{
+  "applicationId": "string",
+  "borrowerName": "string",
+  "loanAmount": "number",
+  "loanType": "string",
+  "propertyAddress": "string",
+  "propertyValue": "number",
+  "borrowerIncome": "number",
+  "creditScore": "number",
+  "downPayment": "number",
+  "loanPurpose": "string",
+  "status": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Loan Model
+```json
+{
+  "loanId": "string",
+  "applicationId": "string",
+  "borrowerName": "string",
+  "loanAmount": "number",
+  "interestRate": "number",
+  "termMonths": "number",
+  "monthlyPayment": "number",
+  "currentBalance": "number",
+  "status": "string",
+  "originationDate": "string",
+  "maturityDate": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+---
+
+## ⚠️ Error Handling
+
+### Standard Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+### Common Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `404` - Resource not found
+- `500` - Internal server error
+
+### Error Types
+- **Validation Errors** - Missing required fields, invalid data types
+- **Business Logic Errors** - Invalid loan amounts, insufficient credit score
+- **Authentication Errors** - Unauthorized access, invalid permissions
+- **System Errors** - Database connection issues, external service failures
+
+---
+
+**Module Version:** 1.0.0  
+**Last Updated:** December 2024  
+**Maintained by:** Intain Markets Development Team

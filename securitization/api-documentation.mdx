@@ -1,0 +1,323 @@
+---
+title: "Securitization Flow API"
+description: "Complete API documentation for asset-backed securities creation and management"
+---
+
+# Securitization Flow - API Documentation
+
+## 📋 Overview
+
+The Securitization Flow module provides comprehensive APIs for managing asset-backed securities creation, management, and distribution. This module handles pool creation, security structuring, investor management, and distribution processes.
+
+**Base URL:** `/securitization/`  
+**Module:** `securitization`  
+**Version:** `1.0.0`  
+**Collections:** `asset_pools`, `securities`, `investors`, `distributions`
+
+<Note>
+**Base URLs:**
+- **Test Network:** `https://imuat.intainmarkets.us/`
+- **Production Network:** `https://intainmarkets.us/`
+</Note>
+
+## 🎯 **API Summary**
+
+### **📄 Asset Pool APIs (2 APIs)**
+- **Core Operations (2 APIs):** Create Asset Pool, Get Pool Details
+
+### **🏢 Security Management APIs (3 APIs)**
+- **Core Operations (3 APIs):** Create Security, Update Security Structure, Get Security Status
+
+**Total: 5 APIs** across all modules
+
+## 🔗 Table of Contents
+
+- [Authentication](#authentication)
+- [Response Format](#response-format)
+- [Asset Pool APIs](#asset-pool-apis)
+- [Security Management APIs](#security-management-apis)
+- [Data Models](#data-models)
+- [Error Handling](#error-handling)
+
+## 🔐 Authentication
+
+All API endpoints require proper authentication. User context should be provided through request headers or middleware.
+
+```http
+Content-Type: application/json
+User-Agent: Securitization-Client/1.0
+```
+
+## 📊 Response Format
+
+All APIs return responses in the following standardized format:
+
+### Success Response
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "securitization",
+  "message": "Operation completed successfully",
+  "result": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+---
+
+## 📄 Asset Pool APIs (2 APIs)
+
+### Core Operations (2 APIs) - Main asset pool management functions
+- **Issuer Actions (2 APIs):** Create Asset Pool, Get Pool Details
+
+### Core Operations
+
+#### Create Asset Pool
+**Endpoint:** `POST /securitization/create-pool`
+
+**Request Body:**
+```json
+{
+  "poolName": "Residential Mortgage Pool 2024-1",
+  "poolType": "Residential Mortgage",
+  "totalAssets": 100000000,
+  "assetCount": 500,
+  "weightedAverageCoupon": 6.25,
+  "weightedAverageMaturity": 28.5,
+  "poolCutoffDate": "2024-12-01T00:00:00Z",
+  "servicerId": "SERVICER-12345",
+  "trusteeId": "TRUSTEE-67890"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "securitization",
+  "message": "Asset pool created successfully",
+  "result": {
+    "poolId": "POOL-20241201-1701234567-abc123",
+    "poolName": "Residential Mortgage Pool 2024-1",
+    "status": "ACTIVE",
+    "createdAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Get Pool Details
+**Endpoint:** `GET /securitization/pool/:poolId`
+
+**Path Parameters:**
+- `poolId` (required): Asset pool identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "securitization",
+  "result": {
+    "poolId": "POOL-20241201-1701234567-abc123",
+    "poolName": "Residential Mortgage Pool 2024-1",
+    "poolType": "Residential Mortgage",
+    "totalAssets": 100000000,
+    "assetCount": 500,
+    "weightedAverageCoupon": 6.25,
+    "weightedAverageMaturity": 28.5,
+    "currentBalance": 98500000,
+    "status": "ACTIVE",
+    "createdAt": "2024-12-01T10:00:00Z",
+    "updatedAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+---
+
+## 🏢 Security Management APIs (3 APIs)
+
+### Core Operations (3 APIs) - Main security management functions
+- **Issuer Actions (3 APIs):** Create Security, Update Security Structure, Get Security Status
+
+### Core Operations
+
+#### Create Security
+**Endpoint:** `POST /securitization/create-security`
+
+**Request Body:**
+```json
+{
+  "poolId": "POOL-20241201-1701234567-abc123",
+  "securityName": "RMBS 2024-1 Class A",
+  "securityType": "Mortgage-Backed Security",
+  "trancheType": "Senior",
+  "faceAmount": 80000000,
+  "couponRate": 5.75,
+  "maturityDate": "2054-12-01T00:00:00Z",
+  "paymentFrequency": "Monthly",
+  "creditEnhancement": "Subordination"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "securitization",
+  "message": "Security created successfully",
+  "result": {
+    "securityId": "SEC-20241201-1701234567-def456",
+    "securityName": "RMBS 2024-1 Class A",
+    "cusip": "12345ABC1",
+    "status": "ACTIVE",
+    "createdAt": "2024-12-01T11:00:00Z"
+  }
+}
+```
+
+#### Update Security Structure
+**Endpoint:** `PUT /securitization/security/:securityId/structure`
+
+**Path Parameters:**
+- `securityId` (required): Security identifier
+
+**Request Body:**
+```json
+{
+  "faceAmount": 85000000,
+  "couponRate": 5.85,
+  "creditEnhancement": "Subordination + Reserve Fund",
+  "paymentPriority": 1
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "securitization",
+  "message": "Security structure updated successfully",
+  "result": {
+    "securityId": "SEC-20241201-1701234567-def456",
+    "updatedFields": ["faceAmount", "couponRate", "creditEnhancement"],
+    "updatedAt": "2024-12-01T12:00:00Z"
+  }
+}
+```
+
+#### Get Security Status
+**Endpoint:** `GET /securitization/security/:securityId/status`
+
+**Path Parameters:**
+- `securityId` (required): Security identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "securitization",
+  "result": {
+    "securityId": "SEC-20241201-1701234567-def456",
+    "securityName": "RMBS 2024-1 Class A",
+    "cusip": "12345ABC1",
+    "currentBalance": 84500000,
+    "outstandingPrincipal": 84500000,
+    "accruedInterest": 125000,
+    "nextPaymentDate": "2025-01-01T00:00:00Z",
+    "status": "ACTIVE",
+    "lastUpdated": "2024-12-01T12:00:00Z"
+  }
+}
+```
+
+---
+
+## 📊 Data Models
+
+### Asset Pool Model
+```json
+{
+  "poolId": "string",
+  "poolName": "string",
+  "poolType": "string",
+  "totalAssets": "number",
+  "assetCount": "number",
+  "weightedAverageCoupon": "number",
+  "weightedAverageMaturity": "number",
+  "currentBalance": "number",
+  "poolCutoffDate": "string",
+  "servicerId": "string",
+  "trusteeId": "string",
+  "status": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Security Model
+```json
+{
+  "securityId": "string",
+  "poolId": "string",
+  "securityName": "string",
+  "securityType": "string",
+  "trancheType": "string",
+  "cusip": "string",
+  "faceAmount": "number",
+  "currentBalance": "number",
+  "couponRate": "number",
+  "maturityDate": "string",
+  "paymentFrequency": "string",
+  "creditEnhancement": "string",
+  "paymentPriority": "number",
+  "status": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+---
+
+## ⚠️ Error Handling
+
+### Standard Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+### Common Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `404` - Resource not found
+- `500` - Internal server error
+
+### Error Types
+- **Validation Errors** - Missing required fields, invalid data types
+- **Business Logic Errors** - Invalid pool structure, insufficient assets
+- **Authentication Errors** - Unauthorized access, invalid permissions
+- **System Errors** - Database connection issues, external service failures
+
+---
+
+**Module Version:** 1.0.0  
+**Last Updated:** December 2024  
+**Maintained by:** Intain Markets Development Team
