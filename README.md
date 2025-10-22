@@ -8,10 +8,10 @@ Intain Markets is a comprehensive digital asset management platform that leverag
 
 ## Available Workflows
 
-- **Credit Facility** - Complete API documentation for managing credit facilities, term sheets, master commitments, and funding requests
-- **Whole Loan Flow** - (Coming Soon) Complete loan lifecycle management APIs
-- **Securitization Flow** - (Coming Soon) Asset-backed securities creation and management APIs
-- **Participation Agreement Flow** - (Coming Soon) Multi-party participation agreement APIs
+- **Credit Facility** - ✅ Complete API documentation for managing credit facilities, term sheets, master commitments, and funding requests
+- **Whole Loan Flow** - ✅ Complete API documentation for loan lifecycle management from origination to servicing
+- **Securitization Flow** - ✅ Complete API documentation for asset-backed securities creation and management
+- **Participation Agreement Flow** - ✅ Complete API documentation for multi-party participation agreements
 
 ## Base URLs
 

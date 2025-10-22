@@ -1,0 +1,334 @@
+# Participation Agreement Flow - API Documentation
+
+## 📋 Overview
+
+The Participation Agreement Flow module provides comprehensive APIs for managing multi-party participation agreements with automated compliance and settlement processes. This module handles agreement creation, participant management, compliance monitoring, and settlement processing.
+
+**Base URL:** `/participation/`  
+**Module:** `participationAgreement`  
+**Version:** `1.0.0`  
+**Collections:** `agreements`, `participants`, `compliance`, `settlements`
+
+<Note>
+**Base URLs:**
+- **Test Network:** `https://imuat.intainmarkets.us/`
+- **Production Network:** `https://intainmarkets.us/`
+</Note>
+
+## 🎯 **API Summary**
+
+### **📄 Agreement Management APIs (2 APIs)**
+- **Core Operations (2 APIs):** Create Participation Agreement, Get Agreement Details
+
+### **🏢 Participant Management APIs (3 APIs)**
+- **Core Operations (3 APIs):** Add Participant, Update Participant Terms, Get Participant Status
+
+**Total: 5 APIs** across all modules
+
+## 🔗 Table of Contents
+
+- [Authentication](#authentication)
+- [Response Format](#response-format)
+- [Agreement Management APIs](#agreement-management-apis)
+- [Participant Management APIs](#participant-management-apis)
+- [Data Models](#data-models)
+- [Error Handling](#error-handling)
+
+## 🔐 Authentication
+
+All API endpoints require proper authentication. User context should be provided through request headers or middleware.
+
+```http
+Content-Type: application/json
+User-Agent: Participation-Agreement-Client/1.0
+```
+
+## 📊 Response Format
+
+All APIs return responses in the following standardized format:
+
+### Success Response
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "message": "Operation completed successfully",
+  "result": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+---
+
+## 📄 Agreement Management APIs (2 APIs)
+
+### Core Operations (2 APIs) - Main agreement management functions
+- **Lead Participant Actions (2 APIs):** Create Participation Agreement, Get Agreement Details
+
+### Core Operations
+
+#### Create Participation Agreement
+**Endpoint:** `POST /participation/create-agreement`
+
+**Request Body:**
+```json
+{
+  "agreementName": "Multi-Lender Credit Facility Agreement 2024",
+  "agreementType": "Credit Facility Participation",
+  "totalCommitmentAmount": 100000000,
+  "leadParticipantId": "LEAD-12345",
+  "agreementTerm": 36,
+  "interestRate": 6.5,
+  "participationFee": 0.25,
+  "governanceStructure": "Majority Vote",
+  "effectiveDate": "2024-12-01T00:00:00Z",
+  "maturityDate": "2027-12-01T00:00:00Z"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "message": "Participation agreement created successfully",
+  "result": {
+    "agreementId": "PA-20241201-1701234567-abc123",
+    "agreementName": "Multi-Lender Credit Facility Agreement 2024",
+    "status": "DRAFT",
+    "createdAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+#### Get Agreement Details
+**Endpoint:** `GET /participation/agreement/:agreementId`
+
+**Path Parameters:**
+- `agreementId` (required): Participation agreement identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "result": {
+    "agreementId": "PA-20241201-1701234567-abc123",
+    "agreementName": "Multi-Lender Credit Facility Agreement 2024",
+    "agreementType": "Credit Facility Participation",
+    "totalCommitmentAmount": 100000000,
+    "currentCommitmentAmount": 75000000,
+    "leadParticipantId": "LEAD-12345",
+    "participantCount": 3,
+    "agreementTerm": 36,
+    "interestRate": 6.5,
+    "participationFee": 0.25,
+    "governanceStructure": "Majority Vote",
+    "effectiveDate": "2024-12-01T00:00:00Z",
+    "maturityDate": "2027-12-01T00:00:00Z",
+    "status": "ACTIVE",
+    "createdAt": "2024-12-01T10:00:00Z",
+    "updatedAt": "2024-12-01T10:00:00Z"
+  }
+}
+```
+
+---
+
+## 🏢 Participant Management APIs (3 APIs)
+
+### Core Operations (3 APIs) - Main participant management functions
+- **Lead Participant Actions (3 APIs):** Add Participant, Update Participant Terms, Get Participant Status
+
+### Core Operations
+
+#### Add Participant
+**Endpoint:** `POST /participation/agreement/:agreementId/add-participant`
+
+**Path Parameters:**
+- `agreementId` (required): Participation agreement identifier
+
+**Request Body:**
+```json
+{
+  "participantId": "PART-67890",
+  "participantName": "Regional Bank Corp",
+  "commitmentAmount": 25000000,
+  "participationPercentage": 25.0,
+  "votingRights": true,
+  "contactEmail": "contact@regionalbank.com",
+  "contactPerson": "Jane Smith",
+  "riskRating": "A"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 201,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "message": "Participant added successfully",
+  "result": {
+    "agreementId": "PA-20241201-1701234567-abc123",
+    "participantId": "PART-67890",
+    "participantName": "Regional Bank Corp",
+    "commitmentAmount": 25000000,
+    "participationPercentage": 25.0,
+    "status": "PENDING_APPROVAL",
+    "addedAt": "2024-12-01T11:00:00Z"
+  }
+}
+```
+
+#### Update Participant Terms
+**Endpoint:** `PUT /participation/agreement/:agreementId/participant/:participantId/terms`
+
+**Path Parameters:**
+- `agreementId` (required): Participation agreement identifier
+- `participantId` (required): Participant identifier
+
+**Request Body:**
+```json
+{
+  "commitmentAmount": 30000000,
+  "participationPercentage": 30.0,
+  "interestRate": 6.75,
+  "riskRating": "A+"
+}
+```
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "message": "Participant terms updated successfully",
+  "result": {
+    "agreementId": "PA-20241201-1701234567-abc123",
+    "participantId": "PART-67890",
+    "updatedFields": ["commitmentAmount", "participationPercentage", "interestRate"],
+    "updatedAt": "2024-12-01T12:00:00Z"
+  }
+}
+```
+
+#### Get Participant Status
+**Endpoint:** `GET /participation/agreement/:agreementId/participant/:participantId/status`
+
+**Path Parameters:**
+- `agreementId` (required): Participation agreement identifier
+- `participantId` (required): Participant identifier
+
+**Response:**
+```json
+{
+  "statuscode": 200,
+  "isSuccess": true,
+  "module": "participationAgreement",
+  "result": {
+    "agreementId": "PA-20241201-1701234567-abc123",
+    "participantId": "PART-67890",
+    "participantName": "Regional Bank Corp",
+    "commitmentAmount": 30000000,
+    "outstandingAmount": 15000000,
+    "participationPercentage": 30.0,
+    "interestRate": 6.75,
+    "riskRating": "A+",
+    "status": "ACTIVE",
+    "lastActivity": "2024-12-01T12:00:00Z",
+    "complianceScore": 95
+  }
+}
+```
+
+---
+
+## 📊 Data Models
+
+### Participation Agreement Model
+```json
+{
+  "agreementId": "string",
+  "agreementName": "string",
+  "agreementType": "string",
+  "totalCommitmentAmount": "number",
+  "currentCommitmentAmount": "number",
+  "leadParticipantId": "string",
+  "participantCount": "number",
+  "agreementTerm": "number",
+  "interestRate": "number",
+  "participationFee": "number",
+  "governanceStructure": "string",
+  "effectiveDate": "string",
+  "maturityDate": "string",
+  "status": "string",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+### Participant Model
+```json
+{
+  "participantId": "string",
+  "agreementId": "string",
+  "participantName": "string",
+  "commitmentAmount": "number",
+  "outstandingAmount": "number",
+  "participationPercentage": "number",
+  "interestRate": "number",
+  "votingRights": "boolean",
+  "contactEmail": "string",
+  "contactPerson": "string",
+  "riskRating": "string",
+  "status": "string",
+  "complianceScore": "number",
+  "createdAt": "string",
+  "updatedAt": "string"
+}
+```
+
+---
+
+## ⚠️ Error Handling
+
+### Standard Error Response
+```json
+{
+  "statuscode": 400,
+  "isSuccess": false,
+  "message": "Detailed error description"
+}
+```
+
+### Common Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `404` - Resource not found
+- `500` - Internal server error
+
+### Error Types
+- **Validation Errors** - Missing required fields, invalid data types
+- **Business Logic Errors** - Invalid commitment amounts, insufficient participants
+- **Authentication Errors** - Unauthorized access, invalid permissions
+- **System Errors** - Database connection issues, external service failures
+
+---
+
+**Module Version:** 1.0.0  
+**Last Updated:** December 2024  
+**Maintained by:** Intain Markets Development Team

@@ -7,7 +7,7 @@
     "light": "#3B82F6",
     "dark": "#1E3A8A"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/logo/favicon.png",
   "navigation": {
     "tabs": [
       {
@@ -23,7 +23,10 @@
           {
             "group": "API Workflows",
             "pages": [
-              "credit-facility/api-documentation"
+              "credit-facility/api-documentation",
+              "whole-loan/api-documentation",
+              "securitization/api-documentation",
+              "participation-agreement/api-documentation"
             ]
           }
         ]
@@ -52,7 +55,7 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:support@intainmarkets.us"
+        "href": "mailto:support@intainft.com"
       }
     ],
     "primary": {
