@@ -1,0 +1,126 @@
+---
+title: "Authentication"
+description: "Learn how to authenticate and access Intain Markets APIs securely"
+---
+
+## API Authentication
+
+All Intain Markets API endpoints require proper authentication. The platform uses a comprehensive authentication system that supports multiple user roles and secure access patterns.
+
+## Authentication Methods
+
+### JWT Token Authentication
+
+The primary authentication method uses JSON Web Tokens (JWT) for secure API access.
+
+```http
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+User-Agent: Intain-Markets-Client/1.0
+```
+
+### User Context
+
+User context should be provided through request headers or middleware, including:
+
+- **User ID:** Unique identifier for the authenticated user
+- **Organization ID:** Organization the user belongs to
+- **Role:** User role (Borrower, Lender, Facility Agent, etc.)
+- **Permissions:** Specific permissions for API access
+
+## User Roles
+
+The Intain Markets platform supports multiple user roles, each with specific API access permissions:
+
+### Borrower
+- **Permissions:** Create and manage term sheets, funding requests, loan mapping
+- **Access:** Own organization's data and related workflows
+- **Key Actions:** Submit term sheets, create funding requests, approve token transfers
+
+### Lender
+- **Permissions:** Review master commitments, confirm fund transfers, manage opportunities
+- **Access:** Master commitments they're part of, funding notices
+- **Key Actions:** Complete DocuSign for master commitments, confirm fund transfers
+
+### Facility Agent (Market Maker)
+- **Permissions:** Manage master commitments, approve/reject funding requests
+- **Access:** All facilities they manage, comprehensive oversight capabilities
+- **Key Actions:** Accept/reject term sheets, create master commitments, approve funding requests
+
+### Servicer
+- **Permissions:** Manage loan servicing, upload loan tapes, monthly reporting
+- **Access:** Assigned loan portfolios and related data
+- **Key Actions:** Upload loan tapes, manage loan servicing, generate reports
+
+## Base URLs
+
+Choose the appropriate base URL based on your environment:
+
+<CardGroup cols={2}>
+  <Card
+    title="Test Network"
+    icon="server"
+    href="https://imuat.intainmarkets.us/"
+  >
+    Use this URL for development and testing
+  </Card>
+  <Card
+    title="Production Network"
+    icon="globe"
+    href="https://intainmarkets.us/"
+  >
+    Use this URL for production applications
+  </Card>
+</CardGroup>
+
+## Authentication Flow
+
+1. **Login:** Authenticate with your credentials
+2. **Token Generation:** Receive JWT token with user context
+3. **API Calls:** Include token in Authorization header
+4. **Token Refresh:** Refresh token before expiration
+
+## Security Best Practices
+
+<Warning>
+Always use HTTPS for API calls and never expose your JWT tokens in client-side code.
+</Warning>
+
+- **HTTPS Only:** All API calls must use HTTPS
+- **Token Storage:** Store JWT tokens securely
+- **Token Expiration:** Implement proper token refresh logic
+- **Environment Variables:** Use environment variables for sensitive data
+- **Rate Limiting:** Respect API rate limits
+
+## Error Handling
+
+### Authentication Errors
+
+```json
+{
+  "statuscode": 401,
+  "isSuccess": false,
+  "message": "Unauthorized - Invalid or expired token"
+}
+```
+
+### Permission Errors
+
+```json
+{
+  "statuscode": 403,
+  "isSuccess": false,
+  "message": "Forbidden - Insufficient permissions for this operation"
+}
+```
+
+## Getting Started
+
+<Card
+  title="Start Building"
+  icon="rocket"
+  href="/credit-facility/api-documentation"
+  horizontal
+>
+  Begin with the Credit Facility API documentation to understand the authentication flow.
+</Card>
