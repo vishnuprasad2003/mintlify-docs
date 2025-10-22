@@ -7,7 +7,7 @@
     "light": "#3B82F6",
     "dark": "#1E3A8A"
   },
-  "favicon": "/logo/favicon.png",
+  "favicon": "/favicon.png",
   "navigation": {
     "tabs": [
       {
@@ -23,10 +23,22 @@
           {
             "group": "API Workflows",
             "pages": [
-              "credit-facility/api-documentation",
-              "whole-loan/api-documentation",
-              "securitization/api-documentation",
-              "participation-agreement/api-documentation"
+              {
+                "page": "credit-facility/api-documentation",
+                "title": "Credit Facility API"
+              },
+              {
+                "page": "whole-loan/api-documentation", 
+                "title": "Whole Loan Flow API"
+              },
+              {
+                "page": "securitization/api-documentation",
+                "title": "Securitization Flow API"
+              },
+              {
+                "page": "participation-agreement/api-documentation",
+                "title": "Participation Agreement API"
+              }
             ]
           }
         ]
@@ -78,8 +90,10 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/intainmarkets",
-      "linkedin": "https://linkedin.com/company/intain-markets"
+      "linkedin": "https://www.linkedin.com/company/intain"
     }
+  },
+  "mintlify": {
+    "hidePoweredBy": true
   }
 }

@@ -52,7 +52,7 @@ This documentation is built with Mintlify and can be deployed to various platfor
 ## Support
 
 For technical support or questions about the APIs, contact:
-- **Email:** support@intainmarkets.us
+- **Email:** support@intainft.com
 - **Platform:** https://intainmarkets.us/
 
 ## License
